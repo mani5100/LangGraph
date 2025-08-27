@@ -27,17 +27,3 @@ graph.add_edge(START,"chat_node")
 graph.add_edge("chat_node",END)
 
 chatbot=graph.compile(checkpointer=checkpointer)
-
-# response=chatbot.invoke(
-#     {"messages":[HumanMessage(content="Who are you")]},
-#     config={
-#     "configurable":{
-#         "thread_id":"thread-1"
-#     }
-# })
-# config={
-#     "configurable":{
-#         "thread_id":"thread-1"
-#     }}
-# data=chatbot.get_state(config=config)
-# print(data.values['messages'])
