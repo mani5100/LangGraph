@@ -66,11 +66,26 @@ if userInput:
     })
     with st.chat_message("human"):
         st.text(userInput)
-        
-    response=chatbot.invoke({"messages":[HumanMessage(content=userInput)]},config=config)
-    st.session_state["message_history"].append({
-        "role":"ai",
-        "content":response['messages'][-1].content
-    })
     with st.chat_message("ai"):
-        st.text(response['messages'][-1].content)
+        ai_message=st.write_stream(
+            message_chunk.content for message_chunk,metadata in chatbot.stream(
+                {
+                    "messages":[HumanMessage(content=userInput)]
+                    },
+                config=config,
+                stream_mode="messages"
+            )
+        )    
+        st.session_state["message_history"].append({
+            "role":"ai",
+            "content":ai_message
+            })
+        
+    
+    # response=chatbot.invoke({"messages":[HumanMessage(content=userInput)]},config=config)
+    # st.session_state["message_history"].append({
+    #     "role":"ai",
+    #     "content":response['messages'][-1].content
+    # })
+    # with st.chat_message("ai"):
+    #     st.text(response['messages'][-1].content)

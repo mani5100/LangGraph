@@ -21,11 +21,11 @@ graph.add_edge(START,"chat_node")
 graph.add_edge("chat_node",END)
 chatbot=graph.compile(checkpointer=checkpointer)
 
-config={
-    "configurable":{
-        "thread_id":"thread-1"
-    }
-}
+# config={
+#     "configurable":{
+#         "thread_id":"thread-1"
+#     }
+# }
 def get_unique_threads():
     unique_thread=set()
     for checkpoint in checkpointer.list(None):
