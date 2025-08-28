@@ -30,7 +30,8 @@ def get_unique_threads():
     unique_thread=set()
     for checkpoint in checkpointer.list(None):
         unique_thread.add(checkpoint.config['configurable']['thread_id'])
-    return list[unique_thread]
+    return list(unique_thread)
 
 # chatbot.invoke({'messages':[HumanMessage(content="What is my name")]},config=config)
 # messages=chatbot.get_state(config=config)
+# print(messages.values['messages'])
