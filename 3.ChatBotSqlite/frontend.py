@@ -1,7 +1,8 @@
 import streamlit as st
 import uuid
 from backend import get_unique_threads,chatbot
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage,AIMessage,SystemMessage,ToolMessage
+
 # ==================================================================
 # =======================Utility Functions==========================
 # ==================================================================
@@ -15,12 +16,18 @@ def load_message_history(thread_id):
     for message in messages.values['messages']:
         if isinstance(message,HumanMessage):
             role="human"
-        else:
-            role="ai"
-        st.session_state['message_history'].append({
+            st.session_state['message_history'].append({
             "role":role,
             "content":message.content
         })
+        elif isinstance(message,AIMessage):
+            role="ai"
+            st.session_state['message_history'].append({
+            "role":role,
+            "content":message.content
+        })
+        elif isinstance(message, ToolMessage) or isinstance(message, SystemMessage):
+            continue
 # ==================================================================
 # ========================Session Settings==========================
 # ==================================================================
@@ -42,23 +49,29 @@ if st.sidebar.button("New Chat"):
     st.session_state['chat_threads'].append(thread_id)
 st.sidebar.title("My Conversations")
 
-for thread_id in st.session_state['chat_threads']:
+for thread_id in st.session_state['chat_threads'][::-1]:
     if st.sidebar.button(thread_id):
         reset_chat()
         st.session_state["session_thread_id"]=thread_id
         load_message_history(st.session_state["session_thread_id"])
         
-
+# ==================================================================
+# ========================Loading Messages==========================
+# ==================================================================
 for message in st.session_state["message_history"]:
     with st.chat_message(message['role']):
         st.text(message['content'])
 
+# ==================================================================
+# ========================Chatbot Section===========================
+# ==================================================================
 userInput=st.chat_input("Type Here")
 config={
     "configurable":{
-        "thread_id":st.session_state["session_thread_id"]
+        "thread_id":st.session_state["session_thread_id"],
+        "metadata": {"thread_id": st.session_state["session_thread_id"]},
     }
-}
+} 
 if userInput:
     st.session_state["message_history"].append({
         "role":"human",
@@ -67,15 +80,34 @@ if userInput:
     with st.chat_message("human"):
         st.text(userInput)
     with st.chat_message("ai"):
-        ai_message=st.write_stream(
-            message_chunk.content for message_chunk,metadata in chatbot.stream(
+        status_holder = {"box": None}
+        def get_ai_message():
+            for message_chunk,metadata in chatbot.stream(
                 {
                     "messages":[HumanMessage(content=userInput)]
                     },
                 config=config,
                 stream_mode="messages"
-            )
-        )    
+            ):
+                if isinstance(message_chunk,AIMessage):
+                    yield message_chunk.content
+                if isinstance(message_chunk, ToolMessage):
+                    tool_name = getattr(message_chunk, "name", "tool")
+                    if status_holder["box"] is None:
+                        status_holder["box"] = st.status(
+                            f"🔧 Using `{tool_name}` …", expanded=True
+                        )
+                    else:
+                        status_holder["box"].update(
+                            label=f"🔧 Using `{tool_name}` …",
+                            state="running",
+                            expanded=True,
+                        )
+        ai_message=st.write_stream(get_ai_message()) 
+        if status_holder["box"] is not None:
+            status_holder["box"].update(
+                label="✅ Tool finished", state="complete", expanded=False
+            )  
         st.session_state["message_history"].append({
             "role":"ai",
             "content":ai_message
